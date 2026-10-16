@@ -12,7 +12,7 @@ import type {
 
 export type SeguimientosApi = Pick<NonNullable<Window['carteraApi']>,
   'tareasListar' | 'tareaCrear' | 'tareaEditar' | 'tareaCambiarEstado' |
-  'tareaCompletar' | 'tareaCancelar' | 'tareaEventosListar'>;
+  'tareaCompletar' | 'tareaCancelar' | 'tareaEventosListar'> & Partial<Pick<NonNullable<Window['carteraApi']>,'alertasOperativasListar'|'alertasOperativasResumen'>>;
 
 export const SEGUIMIENTO_VIEWS = ['HOY', 'VENCIDA', 'PROXIMA', 'COMPLETADA', 'TODAS'] as const;
 export type SeguimientoView = typeof SEGUIMIENTO_VIEWS[number];
@@ -34,6 +34,7 @@ export function normalizedPage(currentPage: number, totalPages: number): number 
   if (totalPages <= 0) return 1;
   return Math.min(Math.max(1, currentPage), totalPages);
 }
+export function createLatestRequestGuard(){let sequence=0;return{begin(){return++sequence;},invalidate(){sequence+=1;},isCurrent(token:number){return token===sequence;}};}
 
 export function canonicalNow(value = new Date()): string {
   const pad = (part: number) => String(part).padStart(2, '0');

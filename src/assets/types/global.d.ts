@@ -41,6 +41,7 @@ import type {
   ManagementReportDetailRequest,
   ManagementReportDetailResult,
 } from '../../types/managementReportDetails';
+import type { AlertaOperativaQuery, AlertaOperativaListResult, AlertaOperativaResumenResult } from '../../types/alertaOperativa';
 import type {
   PaginatedResult,
   Tarea,
@@ -233,6 +234,8 @@ declare global {
       tareaCompletar: (data: TareaCompleteInput) => Promise<import('../../types/tarea').TareaMutationResult>;
       tareaCancelar: (data: TareaCancelInput) => Promise<import('../../types/tarea').TareaMutationResult>;
       tareaEventosListar: (query: TareaEventListQuery) => Promise<PaginatedResult<TareaEvent> | TareaErrorResult>;
+      alertasOperativasListar: (query: AlertaOperativaQuery) => Promise<AlertaOperativaListResult>;
+      alertasOperativasResumen: (query?: AlertaOperativaQuery) => Promise<AlertaOperativaResumenResult>;
       promesaGuardar: (data: PromesaCreateInput) => Promise<PromesaMutationResult>;
       promesasListar: () => Promise<Promesa[]>;
       promesaObtener: (id: number) => Promise<Promesa | null>;

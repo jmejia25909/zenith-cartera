@@ -10,6 +10,7 @@ import type {
   TareaListQuery,
   TareaStateChangeInput,
 } from "../src/types/tarea";
+import type { AlertaOperativaQuery } from "../src/types/alertaOperativa";
 
 const LEGACY_PROMISES_KEY = "cartera_promesas_locales";
 try {
@@ -143,6 +144,8 @@ const apiMethods = {
   tareaCompletar: (data: TareaCompleteInput) => ipcRenderer.invoke("tareaCompletar", data),
   tareaCancelar: (data: TareaCancelInput) => ipcRenderer.invoke("tareaCancelar", data),
   tareaEventosListar: (query: TareaEventListQuery) => ipcRenderer.invoke("tareaEventosListar", query),
+  alertasOperativasListar: (query: AlertaOperativaQuery) => ipcRenderer.invoke("alertasOperativasListar", query),
+  alertasOperativasResumen: (query?: AlertaOperativaQuery) => ipcRenderer.invoke("alertasOperativasResumen", query),
   promesaGuardar: (data: unknown) => ipcRenderer.invoke("promesaGuardar", data),
   promesasListar: () => ipcRenderer.invoke("promesasListar"),
   promesaObtener: (id: number) => ipcRenderer.invoke("promesaObtener", id),

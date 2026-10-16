@@ -17,12 +17,14 @@ import {
   type SeguimientoView,
 } from './seguimientosModel';
 import './seguimientos.css';
+import { AlertasOperativasPanel } from './AlertasOperativasPanel';
+import type { AlertaOperativa } from '../types/alertaOperativa';
 
 const TYPES: Array<[TareaTipo, string]> = [['LLAMAR', 'Llamar'], ['ENVIAR_CORREO', 'Enviar correo'], ['VISITAR', 'Visitar'], ['REVISAR_PROMESA', 'Revisar promesa'], ['REVISAR_DOCUMENTOS', 'Revisar documentos'], ['SEGUIMIENTO_GENERAL', 'Seguimiento general']];
 const PRIORITIES: TareaPrioridad[] = ['ALTA', 'MEDIA', 'BAJA'];
 const VIEW_LABELS: Record<SeguimientoView, string> = { HOY: 'Hoy', VENCIDA: 'Vencidas', PROXIMA: 'Próximas', COMPLETADA: 'Completadas', TODAS: 'Todas' };
-type FormState = { cliente: string; tipo: TareaTipo; titulo: string; descripcion: string; fecha: string; prioridad: TareaPrioridad; responsable: string };
-const EMPTY_FORM: FormState = { cliente: '', tipo: 'LLAMAR', titulo: '', descripcion: '', fecha: '', prioridad: 'MEDIA', responsable: 'sistema' };
+type FormState = { cliente: string; promesaId:number|null; tipo: TareaTipo; titulo: string; descripcion: string; fecha: string; prioridad: TareaPrioridad; responsable: string };
+const EMPTY_FORM: FormState = { cliente: '', promesaId:null, tipo: 'LLAMAR', titulo: '', descripcion: '', fecha: '', prioridad: 'MEDIA', responsable: 'sistema' };
 const EMPTY_FILTERS = { cliente: '', responsable: '', tipo: '', prioridad: '', estado: '', fechaDesde: '', fechaHasta: '', search: '' };
 
 export function HistoryContent({ loading, error, events }: { loading: boolean; error: string | null; events: TareaEvento[] }) {
@@ -41,6 +43,7 @@ export function SeguimientosPage({ api: apiProp, onRegisterGestion }: Seguimient
   const api = apiProp ?? window.carteraApi;
   const client = useMemo(() => api ? createSeguimientosClient(api) : null, [api]);
   const [view, setView] = useState<SeguimientoView>('HOY');
+  const [workspace,setWorkspace]=useState<'TAREAS'|'ALERTAS'>('TAREAS');
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
@@ -111,7 +114,9 @@ export function SeguimientosPage({ api: apiProp, onRegisterGestion }: Seguimient
   const refresh = async () => { await Promise.all([load(), loadCounts()]); };
 
   const openCreate = () => { setEditing(null); setForm(EMPTY_FORM); attemptKey.current = crypto.randomUUID(); setShowForm(true); setError(''); };
-  const openEdit = (tarea: Tarea) => { setEditing(tarea); setForm({ cliente: tarea.cliente, tipo: tarea.tipo, titulo: tarea.titulo, descripcion: tarea.descripcion ?? '', fecha: canonicalToDatetimeLocal(tarea.fecha_programada), prioridad: tarea.prioridad, responsable: tarea.responsable }); setShowForm(true); setError(''); };
+  const openEdit = (tarea: Tarea) => { setEditing(tarea); setForm({ cliente: tarea.cliente, promesaId:tarea.promesa_id, tipo: tarea.tipo, titulo: tarea.titulo, descripcion: tarea.descripcion ?? '', fecha: canonicalToDatetimeLocal(tarea.fecha_programada), prioridad: tarea.prioridad, responsable: tarea.responsable }); setShowForm(true); setError(''); };
+  const createFromAlert=(alerta:AlertaOperativa)=>{setEditing(null);setForm({...EMPTY_FORM,cliente:alerta.cliente,promesaId:alerta.promesa_id,tipo:alerta.promesa_id?'REVISAR_PROMESA':'SEGUIMIENTO_GENERAL',titulo:alerta.promesa_id?'Revisar promesa de pago':'Contactar cliente sin gestión reciente'});attemptKey.current=crypto.randomUUID();setShowForm(true);setError('');};
+  const openTaskFromAlert=(alerta:AlertaOperativa)=>{setWorkspace('TAREAS');setView('TODAS');setFilters({...EMPTY_FILTERS,cliente:alerta.cliente});setPage(1);};
   const closeForm = () => { if (savingRef.current) return; setShowForm(false); setEditing(null); attemptKey.current = null; };
 
   const submitForm = async () => {
@@ -122,7 +127,7 @@ export function SeguimientosPage({ api: apiProp, onRegisterGestion }: Seguimient
     try {
       const result = editing
         ? await client.edit(editing, { tipo: form.tipo, titulo: form.titulo, descripcion: form.descripcion || null, fecha_programada: canonicalDate, prioridad: form.prioridad, responsable: form.responsable })
-        : await client.create({ cliente: form.cliente, tipo: form.tipo, titulo: form.titulo, descripcion: form.descripcion || null, fecha_programada: canonicalDate, prioridad: form.prioridad, responsable: form.responsable, idempotency_key: attemptKey.current ?? crypto.randomUUID() } as TareaCreateInput);
+        : await client.create({ cliente: form.cliente, promesa_id:form.promesaId, tipo: form.tipo, titulo: form.titulo, descripcion: form.descripcion || null, fecha_programada: canonicalDate, prioridad: form.prioridad, responsable: form.responsable, idempotency_key: attemptKey.current ?? crypto.randomUUID() } as TareaCreateInput);
       if (result.ok === false) { setError(taskErrorMessage(result)); return; }
       setShowForm(false); setEditing(null); attemptKey.current = null; await refresh();
     } catch { setError('No fue posible guardar la tarea.'); }
@@ -167,6 +172,8 @@ export function SeguimientosPage({ api: apiProp, onRegisterGestion }: Seguimient
   const hasFilters = Object.values(filters).some(Boolean);
   return <section className="seguimientos-page" data-testid="seguimientos-page">
     <header className="seguimientos-header"><div><h2>Seguimientos</h2><p>Actividades operativas del CRM, priorizadas por fecha y estado.</p></div><button className="btn primary" onClick={openCreate}>＋ Nueva tarea</button></header>
+    <div className="seguimientos-views" aria-label="Área de trabajo"><button className={`btn ${workspace==='TAREAS'?'primary':'secondary'}`} onClick={()=>setWorkspace('TAREAS')}>Tareas</button><button className={`btn ${workspace==='ALERTAS'?'primary':'secondary'}`} onClick={()=>setWorkspace('ALERTAS')}>Alertas</button></div>
+    {workspace==='ALERTAS'&&client?<AlertasOperativasPanel api={api as SeguimientosApi} onCreateTask={createFromAlert} onOpenTask={openTaskFromAlert}/>:<>
     <div className="seguimientos-views" aria-label="Vistas rápidas">{SEGUIMIENTO_VIEWS.map(item => <button key={item} className={`btn ${view === item ? 'primary' : 'secondary'}`} onClick={() => selectView(item)}>{VIEW_LABELS[item]}</button>)}</div>
     <div className="seguimientos-kpis">{(['HOY', 'VENCIDA', 'PROXIMA', 'COMPLETADA'] as const).map(item => <button className="seguimientos-kpi" key={item} onClick={() => selectView(item)}><span>{VIEW_LABELS[item]}</span><strong>{counts[item]}</strong></button>)}</div>
     <div className="card"><div className="seguimientos-card-header"><div className="card-title">Filtros</div>{hasFilters && <button className="btn secondary" onClick={() => { setFilters(EMPTY_FILTERS); setPage(1); }}>Limpiar</button>}</div><div className="seguimientos-filters">
@@ -186,7 +193,7 @@ export function SeguimientosPage({ api: apiProp, onRegisterGestion }: Seguimient
         return <tr key={tarea.id}><td>{friendlyTaskDate(tarea.fecha_programada)}</td><td><strong>{tarea.cliente}</strong></td><td>{TYPES.find(([id]) => id === tarea.tipo)?.[1] ?? tarea.tipo}</td><td title={tarea.descripcion ?? ''}>{tarea.titulo}</td><td><span className={`seguimientos-badge ${tarea.prioridad.toLowerCase()}`}>{tarea.prioridad}</span></td><td><span className={`seguimientos-badge ${operational.toLowerCase()}`}>{operational}</span></td><td>{tarea.responsable}</td><td>{tareaOrigin(tarea)}</td><td><div className="seguimientos-row-actions"><button className="btn secondary" onClick={() => openHistory(tarea)}>Historial</button>{!terminal && <><button className="btn secondary" onClick={() => openEdit(tarea)}>Editar</button>{tarea.estado === 'PENDIENTE' ? <button className="btn secondary" disabled={saving} onClick={() => client && void mutate(() => client.changeState(tarea, 'EN_PROGRESO'))}>Iniciar</button> : <button className="btn secondary" disabled={saving} onClick={() => client && void mutate(() => client.changeState(tarea, 'PENDIENTE'))}>Volver a pendiente</button>}<button className="btn primary" disabled={saving} onClick={() => client && void mutate(() => client.complete(tarea))}>Completar</button><button className="btn secondary" disabled={saving} onClick={() => cancelTask(tarea)}>Cancelar</button></>}{tarea.estado === 'COMPLETADA' && onRegisterGestion && <button className="btn secondary" onClick={() => onRegisterGestion(tarea.cliente)}>Registrar gestión</button>}</div></td></tr>;
       })}</tbody></table></div>}
       <div className="seguimientos-pagination"><span>Página {page} de {Math.max(1, totalPages)}</span><div className="seguimientos-actions"><label>Filas <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}><option>25</option><option>50</option><option>100</option></select></label><button className="btn secondary" disabled={page <= 1} onClick={() => setPage(current => current - 1)}>Anterior</button><button className="btn secondary" disabled={totalPages === 0 || page >= totalPages} onClick={() => setPage(current => current + 1)}>Siguiente</button></div></div>
-    </div>
+    </div></>}
     {showForm && <div className="modal-overlay" onClick={closeForm}><div className="modal seguimientos-modal" onClick={e => e.stopPropagation()}><div className="modal-header">{editing ? 'Editar tarea' : 'Nueva tarea'}</div><div className="modal-body seguimientos-form-grid">
       <label className="field"><span>Cliente</span><input disabled={Boolean(editing)} value={form.cliente} onChange={e => setForm(current => ({ ...current, cliente: e.target.value }))} /></label><label className="field"><span>Tipo</span><select value={form.tipo} onChange={e => setForm(current => ({ ...current, tipo: e.target.value as TareaTipo }))}>{TYPES.map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label><label className="field full"><span>Título</span><input value={form.titulo} onChange={e => setForm(current => ({ ...current, titulo: e.target.value }))} /></label><label className="field full"><span>Descripción</span><textarea rows={3} value={form.descripcion} onChange={e => setForm(current => ({ ...current, descripcion: e.target.value }))} /></label><label className="field"><span>Fecha programada</span><input type="datetime-local" value={form.fecha} onChange={e => setForm(current => ({ ...current, fecha: e.target.value }))} /></label><label className="field"><span>Prioridad</span><select value={form.prioridad} onChange={e => setForm(current => ({ ...current, prioridad: e.target.value as TareaPrioridad }))}>{PRIORITIES.map(item => <option key={item}>{item}</option>)}</select></label><label className="field full"><span>Responsable</span><input value={form.responsable} onChange={e => setForm(current => ({ ...current, responsable: e.target.value }))} /></label>
     </div><div className="modal-footer"><button className="btn secondary" disabled={saving} onClick={closeForm}>Cancelar</button><button className="btn primary" disabled={saving} onClick={() => void submitForm()}>{saving ? 'Guardando…' : 'Guardar'}</button></div></div></div>}

@@ -48,6 +48,7 @@ import {
   updatePromesa,
 } from "./repositories/promesaRepository";
 import { createTareaIpcHandlers } from "./ipc/tareaIpc";
+import { createAlertaOperativaIpcHandlers } from "./ipc/alertaOperativaIpc";
 import * as XLSX from "xlsx";
 import fs from "node:fs";
 import { createHash } from "node:crypto";
@@ -2360,6 +2361,9 @@ ipcMain.handle("tareaCambiarEstado", (_evt, payload) => tareaIpc.tareaCambiarEst
 ipcMain.handle("tareaCompletar", (_evt, payload) => tareaIpc.tareaCompletar(payload));
 ipcMain.handle("tareaCancelar", (_evt, payload) => tareaIpc.tareaCancelar(payload));
 ipcMain.handle("tareaEventosListar", (_evt, payload) => tareaIpc.tareaEventosListar(payload));
+const alertaOperativaIpc = createAlertaOperativaIpcHandlers(db);
+ipcMain.handle("alertasOperativasListar", (_evt, payload) => alertaOperativaIpc.alertasOperativasListar(payload));
+ipcMain.handle("alertasOperativasResumen", (_evt, payload) => alertaOperativaIpc.alertasOperativasResumen(payload));
 
 ipcMain.handle("gestionesListar", (_evt, cliente) => {
   return listGestiones(cliente);

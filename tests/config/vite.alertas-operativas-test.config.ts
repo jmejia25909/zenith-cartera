@@ -1,0 +1,2 @@
+import {defineConfig} from 'vite';
+export default defineConfig({build:{ssr:'tests/tasks/alertas-operativas.integration.ts',target:'node20',outDir:'tests/.build/alertas-operativas',emptyOutDir:true,rollupOptions:{external:['better-sqlite3','node:assert/strict','node:fs','node:path','node:child_process'],output:{format:'cjs',entryFileNames:'alertas-operativas.integration.cjs'}}},ssr:{external:['better-sqlite3']}});
