@@ -2,9 +2,10 @@
 import {
   getManagementReportDetail,
 } from "../../electron/managementReportDetails";
+import { TEST_DATABASE_PATH } from "../testDatabasePath";
 
 const db = new Database(
-  String.raw`C:\Proyectos\cartera-dashboard-test-data\data\cartera.db`,
+  TEST_DATABASE_PATH,
   { readonly: true },
 );
 

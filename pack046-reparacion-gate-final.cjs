@@ -1,6 +1,11 @@
 ﻿const Database = require("better-sqlite3");
 
-const DB_PATH = String.raw`C:\Proyectos\cartera-dashboard-test-data\data\cartera.db`;
+const DB_PATH = process.env.CARTERA_TEST_DB_PATH || require("node:path").resolve(
+  process.cwd(),
+  "tests",
+  "data",
+  "cartera.db",
+);
 const db = new Database(DB_PATH);
 
 db.pragma("foreign_keys = ON");

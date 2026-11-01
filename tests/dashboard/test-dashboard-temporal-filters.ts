@@ -2,9 +2,9 @@
 import {
   computeDashboardExecutiveStats,
 } from "../../electron/dashboardExecutive";
+import { TEST_DATABASE_PATH } from "../testDatabasePath";
 
-const DB_PATH =
-  String.raw`C:\Proyectos\cartera-dashboard-test-data\data\cartera.db`;
+const DB_PATH = TEST_DATABASE_PATH;
 
 const db = new Database(DB_PATH, { readonly: true });
 

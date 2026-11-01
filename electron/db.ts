@@ -1099,8 +1099,7 @@ function resolveDevelopmentDbPath(): string {
 
   return path.resolve(
     process.cwd(),
-    "..",
-    "cartera-dashboard-test-data",
+    "tests",
     "data",
     "cartera.db",
   );

@@ -14,7 +14,7 @@ if ([string]::IsNullOrWhiteSpace($version)) {
 }
 
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
-    $OutputDirectory = "C:\Proyectos\Zenith-Cartera-Releases\v$version"
+    $OutputDirectory = Join-Path $root "release\v$version"
 }
 
 

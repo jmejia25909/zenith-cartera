@@ -230,14 +230,14 @@ $dbText = [System.IO.File]::ReadAllText($dbFile)
 
 $qaOccurrences = [regex]::Matches(
     $dbText,
-    "cartera-dashboard-test-data"
+    '"tests"\s*,\s*"data"\s*,\s*"cartera\.db"'
 ).Count
 
 if ($qaOccurrences -ne 1) {
-    throw "electron/db.ts debe contener exactamente 1 referencia QA. Encontradas: $qaOccurrences"
+    throw "electron/db.ts debe contener exactamente 1 referencia a la base QA. Encontradas: $qaOccurrences"
 }
 
-$devPattern = '(?s)function resolveDevelopmentDbPath\(\): string \{.*?cartera-dashboard-test-data.*?\r?\n\}'
+$devPattern = '(?s)function resolveDevelopmentDbPath\(\): string \{.*?"tests",\s*"data",\s*"cartera\.db".*?\r?\n\s*\)'
 
 if ($dbText -notmatch $devPattern) {
     throw "Ruta QA no encapsulada en resolveDevelopmentDbPath()."

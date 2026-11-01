@@ -4,9 +4,9 @@ import Database from "better-sqlite3";
 import * as XLSX from "xlsx";
 
 import { importarCarteraPorCobrarExcel } from "../../electron/importContifico";
+import { TEST_DATABASE_PATH } from "../testDatabasePath";
 
-const SOURCE_DB =
-  String.raw`C:\Proyectos\cartera-dashboard-test-data\data\cartera.db`;
+const SOURCE_DB = TEST_DATABASE_PATH;
 
 const SOURCE_XLS =
   String.raw`C:\Users\j-mej\Downloads\CarteraPorCobrar (2).xls`;

@@ -4,9 +4,9 @@ import Database from "better-sqlite3";
 import * as XLSX from "xlsx";
 
 import { importCreditNotesExcel } from "../../electron/importCreditNotes";
+import { TEST_DATABASE_PATH } from "../testDatabasePath";
 
-const SOURCE_DB =
-  String.raw`C:\Proyectos\cartera-dashboard-test-data\data\cartera.db`;
+const SOURCE_DB = TEST_DATABASE_PATH;
 
 const TEMP_DIR = path.join(process.cwd(), "_test_nc_rehydrate");
 const TEMP_DB = path.join(TEMP_DIR, "cartera-nc-test.db");
