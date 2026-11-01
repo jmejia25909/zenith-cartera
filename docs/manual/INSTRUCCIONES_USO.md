@@ -236,8 +236,8 @@ pnpm build
 
 ### Crear Respaldo Manual
 ```bash
-cd C:\dev
-robocopy cartera-dashboard respaldos\backup-manual /S
+cd C:\Proyectos
+robocopy Zenith-Cartera respaldos\backup-manual /S
 ```
 
 ### Ubicación de Respaldos

@@ -7,7 +7,7 @@ REM Coloca este archivo en: C:\ProgramData\Microsoft\Windows\Start Menu\Programs
 echo [%date% %time%] Iniciando Cartera Dashboard...
 
 REM Navega a la carpeta del proyecto
-cd /d "C:\dev\cartera-dashboard"
+cd /d "C:\Proyectos\Zenith-Cartera"
 
 REM Verifica que Node.js y pnpm estén disponibles
 where pnpm >nul 2>nul

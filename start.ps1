@@ -12,7 +12,7 @@ Get-Process node, electron -ErrorAction SilentlyContinue | Stop-Process -Force -
 
 Write-Host "1️⃣  Iniciando servidor Vite..." -ForegroundColor Yellow
 $viteJob = Start-Job -ScriptBlock {
-  cd C:\dev\cartera-dashboard
+  cd C:\Proyectos\Zenith-Cartera
   & pnpm dev:renderer
 }
 
@@ -24,7 +24,7 @@ Write-Host ""
 Write-Host "2️⃣  Compilando Electron..." -ForegroundColor Yellow
 
 # Compilar electron
-cd C:\dev\cartera-dashboard
+cd C:\Proyectos\Zenith-Cartera
 pnpm exec tsc -p tsconfig.node.json
 
 Write-Host ""

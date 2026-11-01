@@ -3,7 +3,7 @@
 ## Iniciar la aplicación (RECOMENDADO - Navegador Web)
 
 ```powershell
-cd C:\dev\cartera-dashboard
+cd C:\Proyectos\Zenith-Cartera
 pnpm start
 ```
 

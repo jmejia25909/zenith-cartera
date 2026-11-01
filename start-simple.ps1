@@ -17,7 +17,7 @@ Start-Sleep -Seconds 1
 # 2. Iniciar servidor Vite en background job
 Write-Host "Iniciando servidor Vite..." -ForegroundColor Cyan
 $viteJob = Start-Job -ScriptBlock {
-  cd C:\dev\cartera-dashboard
+  cd C:\Proyectos\Zenith-Cartera
   & pnpm dev:renderer 2>&1 | Out-Null
 } -Name "ViteServer"
 
@@ -25,7 +25,7 @@ Start-Sleep -Seconds 8
 
 # 3. Compilar Electron
 Write-Host "Compilando Electron..." -ForegroundColor Cyan
-cd C:\dev\cartera-dashboard
+cd C:\Proyectos\Zenith-Cartera
 pnpm exec tsc -p tsconfig.node.json 2>&1 | Out-Null
 pnpm exec vite build --config electron.vite.config.ts --logLevel silent 2>&1 | Out-Null
 

@@ -1,5 +1,5 @@
 ﻿$ErrorActionPreference = "Stop"
-$root = "C:\Proyectos\cartera-dashboard-master"
+$root = "C:\Proyectos\Zenith-Cartera"
 
 $db = Get-Content "$root\electron\db.ts" -Raw -Encoding UTF8
 $main = Get-Content "$root\electron\main.ts" -Raw -Encoding UTF8

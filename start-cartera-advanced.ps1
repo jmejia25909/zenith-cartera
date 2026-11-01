@@ -1,11 +1,11 @@
 # Script para iniciar automáticamente Cartera Dashboard
 # Coloca este archivo en: C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\
-# O ejecuta: powershell -ExecutionPolicy Bypass -File "C:\dev\cartera-dashboard\start-cartera-advanced.ps1"
+# O ejecuta: powershell -ExecutionPolicy Bypass -File "C:\Proyectos\Zenith-Cartera\start-cartera-advanced.ps1"
 
 Write-Host "[$(Get-Date)] Iniciando Cartera Dashboard con soporte remoto..." -ForegroundColor Green
 
 # Navega a la carpeta del proyecto
-Set-Location -Path "C:\dev\cartera-dashboard"
+Set-Location -Path "C:\Proyectos\Zenith-Cartera"
 
 # 1. Iniciar el servidor Vite (dev:renderer)
 Write-Host "Iniciando servidor Vite..." -ForegroundColor Cyan
