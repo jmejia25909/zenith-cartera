@@ -4281,6 +4281,15 @@ button:disabled {
   object-fit: contain;
 }
 
+.powerbi-brand__logo-text {
+  color: #064e3b;
+  font-size: 0.62rem;
+  font-weight: 850;
+  line-height: 1;
+  text-align: center;
+  text-transform: uppercase;
+}
+
 .powerbi-brand__identity h1 {
   margin: 0;
   color: #064e3b;

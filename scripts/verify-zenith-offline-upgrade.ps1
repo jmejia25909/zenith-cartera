@@ -34,8 +34,8 @@ $checks = [ordered]@{
   "NSIS preserva AppData" = $builder.Contains("deleteAppDataOnUninstall: false")
   "win.icon configurado" = $builder.Contains('icon: "build/icon.ico"')
   "installerIcon configurado" = $builder.Contains('installerIcon: "build/icon.ico"')
-  "upgrade coordinado" = Test-Regex $db 'const\s+releaseUpgrade\s*=\s*beginReleaseUpgrade\s*\('
-  "safety legado preservado" = Test-Regex $db 'const\s+safety\s*=\s*initializeDataSafety\s*\('
+  "upgrade coordinado" = Test-Regex $db 'await\s+beginReleaseUpgrade\s*\('
+  "safety legado preservado" = Test-Regex $db 'await\s+initializeDataSafety\s*\('
   "schema validado" = Test-Regex $db 'validateReleaseSchema\s*\(\s*db\s*\)'
   "release registrada" = Test-Regex $db 'completeReleaseUpgrade\s*\(\s*db\s*,\s*releaseUpgrade\s*,?\s*\)'
   "restore automático" = Test-Regex $db 'restoreDatabaseFile\s*\(\s*dbPath\s*,\s*restoreFrom\s*,?\s*\)'

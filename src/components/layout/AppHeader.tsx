@@ -27,10 +27,17 @@ export function AppHeader({
     <header className="app-header powerbi-app-header">
       <div className="powerbi-brand">
         <div className="powerbi-brand__logo">
-          <img
-            src={empresa.logo || '/logo-freeplastic.png'}
-            alt={empresa.logo ? 'Logo' : 'Logo FreePlastic'}
-          />
+          {empresa.logo?.trim() ? <>
+            <img
+              src={empresa.logo}
+              alt="Logo de la empresa"
+              onError={(event) => {
+                event.currentTarget.hidden = true;
+                event.currentTarget.nextElementSibling?.removeAttribute('hidden');
+              }}
+            />
+            <span className="powerbi-brand__logo-text" hidden aria-label="FreePlastic">FreePlastic</span>
+          </> : <span className="powerbi-brand__logo-text" aria-label="FreePlastic">FreePlastic</span>}
         </div>
 
         <div className="powerbi-brand__identity">

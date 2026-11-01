@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type Database from "better-sqlite3";
+import { backupDatabase, publishBackupFile } from "./sqliteBackup";
 
 const DATA_SAFETY_MIGRATION = 1;
 
@@ -51,14 +52,12 @@ function formatTimestamp(date: Date): string {
   ].join("");
 }
 
-function createPreUpdateBackup(
+async function createPreUpdateBackup(
   db: Database.Database,
   dbPath: string,
   targetVersion: string
-): string | null {
+): Promise<string | null> {
   if (!fs.existsSync(dbPath) || !hasUserData(db)) return null;
-
-  db.pragma("wal_checkpoint(TRUNCATE)");
 
   const backupDir = path.join(path.dirname(dbPath), "backups");
   fs.mkdirSync(backupDir, { recursive: true });
@@ -69,7 +68,7 @@ function createPreUpdateBackup(
     `cartera-pre-update-to-v${safeVersion}-${formatTimestamp(new Date())}.db`
   );
 
-  fs.copyFileSync(dbPath, backupPath);
+  await backupDatabase(db, backupPath);
   return backupPath;
 }
 
@@ -229,18 +228,18 @@ export function assertDatabaseIntegrity(db: Database.Database): void {
   }
 }
 
-export function initializeDataSafety(
+export async function initializeDataSafety(
   db: Database.Database,
   dbPath: string,
   targetVersion: string
-): DataSafetyResult {
+): Promise<DataSafetyResult> {
   const requiresMigration = !migrationAlreadyApplied(db);
   if (!requiresMigration) {
     assertDatabaseIntegrity(db);
     return { backupPath: null, migrationApplied: false };
   }
 
-  const backupPath = createPreUpdateBackup(db, dbPath, targetVersion);
+  const backupPath = await createPreUpdateBackup(db, dbPath, targetVersion);
 
   const migrate = db.transaction(() => {
     ensureMigrationTable(db);
@@ -259,10 +258,14 @@ export function restoreDatabaseFile(dbPath: string, backupPath: string): void {
     throw new Error(`No existe el respaldo de restauracion: ${backupPath}`);
   }
 
-  for (const suffix of ["-wal", "-shm"]) {
-    const sidecar = `${dbPath}${suffix}`;
-    if (fs.existsSync(sidecar)) fs.rmSync(sidecar, { force: true });
+  const temporaryPath = `${dbPath}.restore-${process.pid}-${Date.now()}`;
+  try {
+    fs.copyFileSync(backupPath, temporaryPath);
+    publishBackupFile(temporaryPath, dbPath);
+  } catch (error) {
+    if (fs.existsSync(temporaryPath)) {
+      console.error(`Restauracion incompleta; respaldo temporal conservado en ${temporaryPath}`);
+    }
+    throw error;
   }
-
-  fs.copyFileSync(backupPath, dbPath);
 }

@@ -298,6 +298,21 @@ export function createScenarioContext(label: string): ScenarioContext {
   };
 }
 
+export function ensureScenarioDocument(
+  context: ScenarioContext,
+  document: string,
+  customer = "CLIENTE-P",
+  balance = 100,
+  isSubtotal = 0,
+): void {
+  context.db.prepare(`
+    INSERT OR IGNORE INTO documentos (
+      cliente, razon_social, tipo_documento, documento, documento_normalizado,
+      total, valor_documento, saldo_pendiente, saldo_original, posicion_cartera, is_subtotal
+    ) VALUES (?, ?, 'FAC', ?, ?, ?, ?, ?, ?, 'DEUDA_VIVA', ?)
+  `).run(customer, customer, document, normalized(document), balance, balance, balance, balance, isSubtotal);
+}
+
 function createImport(db: Database.Database, type: string, label: string): number {
   const result = db.prepare(`
     INSERT INTO importaciones (

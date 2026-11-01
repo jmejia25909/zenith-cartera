@@ -1,0 +1,2 @@
+import {defineConfig} from 'vite';import react from '@vitejs/plugin-react';
+export default defineConfig({plugins:[react()],build:{ssr:'tests/tasks/bandeja-operativa-ui.integration.tsx',target:'node20',outDir:'tests/.build/bandeja-operativa-ui',emptyOutDir:true,rollupOptions:{external:['better-sqlite3','node:assert/strict','node:fs','node:path'],output:{format:'es',entryFileNames:'bandeja-operativa-ui.integration.mjs'}}},ssr:{external:['better-sqlite3']}});

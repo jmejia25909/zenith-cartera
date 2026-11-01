@@ -114,7 +114,7 @@ export interface Promesa {
   creado_en: string; actualizado_en?: string | null; razon_social?: string;
 }
 export type PromesaCreateInput = Pick<Promesa, 'cliente' | 'fecha_promesa' | 'monto_prometido'> & Partial<Pick<Promesa, 'gestion_id' | 'documento_id' | 'monto_pagado' | 'estado' | 'fecha_pago' | 'motivo_incumplimiento' | 'observacion' | 'documentos'>>;
-export type PromesaUpdateInput = Partial<Pick<Promesa, 'fecha_promesa' | 'monto_prometido' | 'monto_pagado' | 'fecha_pago' | 'motivo_incumplimiento' | 'observacion'>>;
+export type PromesaUpdateInput = Partial<Pick<Promesa, 'fecha_promesa' | 'monto_prometido' | 'monto_pagado' | 'fecha_pago' | 'motivo_incumplimiento' | 'observacion' | 'documento_id' | 'documentos'>>;
 export type PromesaAtomicUpdateInput = PromesaUpdateInput & { estado?: PromesaState };
 export type PromesaMutationResult = { ok: true; promesa: Promesa } | { ok: false; code: 'PROMESA_NOT_FOUND' | 'PROMESA_INVALID' | 'PROMESA_INVALID_TRANSITION' | 'PROMESA_DOCUMENT_ALLOCATION_MISMATCH' | 'PROMESA_LEGACY_ID_CONFLICT' | 'PROMESA_LEGACY_MAPPING_ORPHAN'; message: string; legacy_id?: string };
 export interface PromesaLegacyInput extends PromesaCreateInput { legacy_id: string; promesa_id?: number; actualizado_en?: string | null; }

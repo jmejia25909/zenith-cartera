@@ -5,6 +5,7 @@ import {
   canonicalNow,
   canonicalToDatetimeLocal,
   createHistoryRequestGuard,
+  createLatestRequestGuard,
   createSeguimientosClient,
   datetimeLocalToCanonical,
   friendlyTaskDate,
@@ -17,8 +18,11 @@ import {
   type SeguimientoView,
 } from './seguimientosModel';
 import './seguimientos.css';
+import './seguimientos.visual.css';
 import { AlertasOperativasPanel } from './AlertasOperativasPanel';
 import type { AlertaOperativa } from '../types/alertaOperativa';
+import type { BandejaOperativaRow } from '../types/bandejaOperativa';
+import { BandejaOperativaPanel, type BandejaOperativaApi } from './BandejaOperativaPanel';
 
 const TYPES: Array<[TareaTipo, string]> = [['LLAMAR', 'Llamar'], ['ENVIAR_CORREO', 'Enviar correo'], ['VISITAR', 'Visitar'], ['REVISAR_PROMESA', 'Revisar promesa'], ['REVISAR_DOCUMENTOS', 'Revisar documentos'], ['SEGUIMIENTO_GENERAL', 'Seguimiento general']];
 const PRIORITIES: TareaPrioridad[] = ['ALTA', 'MEDIA', 'BAJA'];
@@ -43,7 +47,8 @@ export function SeguimientosPage({ api: apiProp, onRegisterGestion }: Seguimient
   const api = apiProp ?? window.carteraApi;
   const client = useMemo(() => api ? createSeguimientosClient(api) : null, [api]);
   const [view, setView] = useState<SeguimientoView>('HOY');
-  const [workspace,setWorkspace]=useState<'TAREAS'|'ALERTAS'>('TAREAS');
+  const [workspace,setWorkspace]=useState<'BANDEJA'|'TAREAS'|'ALERTAS'>('BANDEJA');
+  const [filtersVisible,setFiltersVisible]=useState(false);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
@@ -66,6 +71,7 @@ export function SeguimientosPage({ api: apiProp, onRegisterGestion }: Seguimient
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const historyGuardRef = useRef(createHistoryRequestGuard());
+  const taskOpenGuardRef = useRef(createLatestRequestGuard());
   const historyTaskIdRef = useRef<number | null>(null);
   const eventPageRef = useRef(1);
   const historyOpenRef = useRef(false);
@@ -108,6 +114,8 @@ export function SeguimientosPage({ api: apiProp, onRegisterGestion }: Seguimient
 
   useEffect(() => { void load(); }, [load]);
   useEffect(() => { void loadCounts(); }, [loadCounts]);
+  useEffect(() => { if (workspace !== 'BANDEJA') taskOpenGuardRef.current.invalidate(); }, [workspace]);
+  useEffect(() => () => taskOpenGuardRef.current.invalidate(), []);
 
   const changeFilter = (key: keyof typeof EMPTY_FILTERS, value: string) => { setFilters(current => ({ ...current, [key]: value })); if (key === 'estado' && value) setView('TODAS'); setPage(1); };
   const selectView = (next: SeguimientoView) => { setView(next); setFilters(current => ({ ...current, estado: '' })); setPage(1); };
@@ -117,6 +125,8 @@ export function SeguimientosPage({ api: apiProp, onRegisterGestion }: Seguimient
   const openEdit = (tarea: Tarea) => { setEditing(tarea); setForm({ cliente: tarea.cliente, promesaId:tarea.promesa_id, tipo: tarea.tipo, titulo: tarea.titulo, descripcion: tarea.descripcion ?? '', fecha: canonicalToDatetimeLocal(tarea.fecha_programada), prioridad: tarea.prioridad, responsable: tarea.responsable }); setShowForm(true); setError(''); };
   const createFromAlert=(alerta:AlertaOperativa)=>{setEditing(null);setForm({...EMPTY_FORM,cliente:alerta.cliente,promesaId:alerta.promesa_id,tipo:alerta.promesa_id?'REVISAR_PROMESA':'SEGUIMIENTO_GENERAL',titulo:alerta.promesa_id?'Revisar promesa de pago':'Contactar cliente sin gestión reciente'});attemptKey.current=crypto.randomUUID();setShowForm(true);setError('');};
   const openTaskFromAlert=(alerta:AlertaOperativa)=>{setWorkspace('TAREAS');setView('TODAS');setFilters({...EMPTY_FILTERS,cliente:alerta.cliente});setPage(1);};
+  const createFromBandeja=(row:BandejaOperativaRow)=>{if(row.origen==='TAREA')return;setEditing(null);setForm({...EMPTY_FORM,cliente:row.cliente,promesaId:row.origen==='PROMESA'?row.promesa_id:null,tipo:row.origen==='PROMESA'?'REVISAR_PROMESA':'SEGUIMIENTO_GENERAL',titulo:row.origen==='PROMESA'?'Revisar promesa de pago':'Contactar cliente sin gestión reciente'});attemptKey.current=crypto.randomUUID();setShowForm(true);setError('');};
+  const openTaskFromBandeja=async(tareaId:number)=>{const token=taskOpenGuardRef.current.begin();if(!api?.tareaObtener){if(taskOpenGuardRef.current.isCurrent(token))setError('No fue posible localizar la tarea.');return;}try{const tarea=await api.tareaObtener(tareaId);if(!taskOpenGuardRef.current.isCurrent(token))return;if(!tarea){setError('La tarea ya no existe.');return;}setWorkspace('TAREAS');setView('TODAS');setFilters(EMPTY_FILTERS);setPage(1);openEdit(tarea);}catch{if(taskOpenGuardRef.current.isCurrent(token))setError('No fue posible localizar la tarea.');}};
   const closeForm = () => { if (savingRef.current) return; setShowForm(false); setEditing(null); attemptKey.current = null; };
 
   const submitForm = async () => {
@@ -171,12 +181,12 @@ export function SeguimientosPage({ api: apiProp, onRegisterGestion }: Seguimient
 
   const hasFilters = Object.values(filters).some(Boolean);
   return <section className="seguimientos-page" data-testid="seguimientos-page">
-    <header className="seguimientos-header"><div><h2>Seguimientos</h2><p>Actividades operativas del CRM, priorizadas por fecha y estado.</p></div><button className="btn primary" onClick={openCreate}>＋ Nueva tarea</button></header>
-    <div className="seguimientos-views" aria-label="Área de trabajo"><button className={`btn ${workspace==='TAREAS'?'primary':'secondary'}`} onClick={()=>setWorkspace('TAREAS')}>Tareas</button><button className={`btn ${workspace==='ALERTAS'?'primary':'secondary'}`} onClick={()=>setWorkspace('ALERTAS')}>Alertas</button></div>
-    {workspace==='ALERTAS'&&client?<AlertasOperativasPanel api={api as SeguimientosApi} onCreateTask={createFromAlert} onOpenTask={openTaskFromAlert}/>:<>
+    <header className="seguimientos-header"><div><h2>Seguimientos</h2><p>Actividades operativas del CRM, priorizadas por fecha y estado.</p></div><div className="seguimientos-header-actions"><button className="btn secondary" type="button" aria-expanded={filtersVisible} onClick={() => setFiltersVisible(value => !value)}>{filtersVisible ? 'Ocultar filtros' : 'Mostrar filtros'}</button><button className="btn primary" onClick={openCreate}>＋ Nueva tarea</button></div></header>
+    <div className="seguimientos-views" aria-label="Área de trabajo"><button className={`btn ${workspace==='BANDEJA'?'primary':'secondary'}`} onClick={()=>setWorkspace('BANDEJA')}>Bandeja</button><button className={`btn ${workspace==='TAREAS'?'primary':'secondary'}`} onClick={()=>setWorkspace('TAREAS')}>Tareas</button><button className={`btn ${workspace==='ALERTAS'?'primary':'secondary'}`} onClick={()=>setWorkspace('ALERTAS')}>Alertas</button></div>
+    {workspace==='BANDEJA'&&api?.bandejaOperativaListar&&api.bandejaOperativaResumen?<BandejaOperativaPanel api={api as BandejaOperativaApi} filtersVisible={filtersVisible} onCreateTask={createFromBandeja} onOpenTask={id=>void openTaskFromBandeja(id)}/>:workspace==='ALERTAS'&&client?<AlertasOperativasPanel api={api as SeguimientosApi} filtersVisible={filtersVisible} onCreateTask={createFromAlert} onOpenTask={openTaskFromAlert}/>:<>
     <div className="seguimientos-views" aria-label="Vistas rápidas">{SEGUIMIENTO_VIEWS.map(item => <button key={item} className={`btn ${view === item ? 'primary' : 'secondary'}`} onClick={() => selectView(item)}>{VIEW_LABELS[item]}</button>)}</div>
     <div className="seguimientos-kpis">{(['HOY', 'VENCIDA', 'PROXIMA', 'COMPLETADA'] as const).map(item => <button className="seguimientos-kpi" key={item} onClick={() => selectView(item)}><span>{VIEW_LABELS[item]}</span><strong>{counts[item]}</strong></button>)}</div>
-    <div className="card"><div className="seguimientos-card-header"><div className="card-title">Filtros</div>{hasFilters && <button className="btn secondary" onClick={() => { setFilters(EMPTY_FILTERS); setPage(1); }}>Limpiar</button>}</div><div className="seguimientos-filters">
+    {filtersVisible && <div className="card"><div className="seguimientos-card-header"><div className="card-title">Filtros</div>{hasFilters && <button className="btn secondary" onClick={() => { setFilters(EMPTY_FILTERS); setPage(1); }}>Limpiar</button>}</div><div className="seguimientos-filters">
       <label className="field"><span>Cliente</span><input value={filters.cliente} onChange={e => changeFilter('cliente', e.target.value)} /></label>
       <label className="field"><span>Responsable</span><input value={filters.responsable} onChange={e => changeFilter('responsable', e.target.value)} /></label>
       <label className="field"><span>Tipo</span><select value={filters.tipo} onChange={e => changeFilter('tipo', e.target.value)}><option value="">Todos</option>{TYPES.map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>
@@ -185,12 +195,12 @@ export function SeguimientosPage({ api: apiProp, onRegisterGestion }: Seguimient
       <label className="field"><span>Desde</span><input type="date" value={filters.fechaDesde} onChange={e => changeFilter('fechaDesde', e.target.value)} /></label>
       <label className="field"><span>Hasta</span><input type="date" value={filters.fechaHasta} onChange={e => changeFilter('fechaHasta', e.target.value)} /></label>
       <label className="field wide"><span>Buscar</span><input type="search" value={filters.search} placeholder="Cliente, título o descripción" onChange={e => changeFilter('search', e.target.value)} /></label>
-    </div></div>
+    </div></div>}
     {error && <div className="seguimientos-error" role="alert">{error}</div>}
     <div className="card"><div className="seguimientos-card-header"><div className="card-title">Tareas</div><span>{total} resultado{total === 1 ? '' : 's'}</span></div>
-      {loading ? <div className="seguimientos-state">Cargando seguimientos…</div> : items.length === 0 ? <div className="seguimientos-state">{hasFilters ? 'No hay resultados con los filtros seleccionados.' : 'No hay tareas en esta vista.'}</div> : <div className="table-wrapper"><table className="data-table"><thead><tr><th>Fecha programada</th><th>Cliente</th><th>Tipo</th><th>Título</th><th>Prioridad</th><th>Estado operativo</th><th>Responsable</th><th>Origen</th><th>Acciones</th></tr></thead><tbody>{items.map(tarea => {
+      {loading ? <div className="seguimientos-state">Cargando seguimientos…</div> : items.length === 0 ? <div className="seguimientos-state seguimientos-empty-state"><strong>{hasFilters ? 'No hay resultados con los filtros seleccionados.' : 'No hay tareas en esta vista.'}</strong><span>{hasFilters ? 'Prueba con otros criterios o limpia los filtros.' : 'Las tareas pendientes aparecerán aquí cuando estén disponibles.'}</span></div> : <div className="table-wrapper"><table className="data-table"><thead><tr><th>Fecha programada</th><th>Cliente</th><th>Tipo</th><th>Título</th><th>Prioridad</th><th>Estado operativo</th><th>Responsable</th><th>Origen</th><th>Acciones</th></tr></thead><tbody>{items.map(tarea => {
         const terminal = tarea.estado === 'COMPLETADA' || tarea.estado === 'CANCELADA'; const operational = tarea.estado_operativo ?? tarea.estado;
-        return <tr key={tarea.id}><td>{friendlyTaskDate(tarea.fecha_programada)}</td><td><strong>{tarea.cliente}</strong></td><td>{TYPES.find(([id]) => id === tarea.tipo)?.[1] ?? tarea.tipo}</td><td title={tarea.descripcion ?? ''}>{tarea.titulo}</td><td><span className={`seguimientos-badge ${tarea.prioridad.toLowerCase()}`}>{tarea.prioridad}</span></td><td><span className={`seguimientos-badge ${operational.toLowerCase()}`}>{operational}</span></td><td>{tarea.responsable}</td><td>{tareaOrigin(tarea)}</td><td><div className="seguimientos-row-actions"><button className="btn secondary" onClick={() => openHistory(tarea)}>Historial</button>{!terminal && <><button className="btn secondary" onClick={() => openEdit(tarea)}>Editar</button>{tarea.estado === 'PENDIENTE' ? <button className="btn secondary" disabled={saving} onClick={() => client && void mutate(() => client.changeState(tarea, 'EN_PROGRESO'))}>Iniciar</button> : <button className="btn secondary" disabled={saving} onClick={() => client && void mutate(() => client.changeState(tarea, 'PENDIENTE'))}>Volver a pendiente</button>}<button className="btn primary" disabled={saving} onClick={() => client && void mutate(() => client.complete(tarea))}>Completar</button><button className="btn secondary" disabled={saving} onClick={() => cancelTask(tarea)}>Cancelar</button></>}{tarea.estado === 'COMPLETADA' && onRegisterGestion && <button className="btn secondary" onClick={() => onRegisterGestion(tarea.cliente)}>Registrar gestión</button>}</div></td></tr>;
+        return <tr key={tarea.id}><td>{friendlyTaskDate(tarea.fecha_programada)}</td><td><strong>{tarea.cliente}</strong></td><td>{TYPES.find(([id]) => id === tarea.tipo)?.[1] ?? tarea.tipo}</td><td title={tarea.descripcion ?? ''}>{tarea.titulo}</td><td><span className={`seguimientos-badge ${tarea.prioridad.toLowerCase()}`}>{tarea.prioridad}</span></td><td><span className={`seguimientos-badge ${operational.toLowerCase()}`}>{operational}</span></td><td>{tarea.responsable}</td><td>{tareaOrigin(tarea)}</td><td><div className="seguimientos-row-actions"><button className="btn primary" disabled={saving} onClick={() => client && void mutate(() => client.complete(tarea))}>Completar</button><details className="seguimientos-action-menu"><summary className="btn secondary">Más acciones</summary><div className="seguimientos-action-menu__items" role="menu"><button className="btn secondary" onClick={() => openHistory(tarea)}>Historial</button>{!terminal && <><button className="btn secondary" onClick={() => openEdit(tarea)}>Editar</button>{tarea.estado === 'PENDIENTE' ? <button className="btn secondary" disabled={saving} onClick={() => client && void mutate(() => client.changeState(tarea, 'EN_PROGRESO'))}>Iniciar</button> : <button className="btn secondary" disabled={saving} onClick={() => client && void mutate(() => client.changeState(tarea, 'PENDIENTE'))}>Volver a pendiente</button>}<button className="btn secondary" disabled={saving} onClick={() => cancelTask(tarea)}>Cancelar</button></>}{tarea.estado === 'COMPLETADA' && onRegisterGestion && <button className="btn secondary" onClick={() => onRegisterGestion(tarea.cliente)}>Registrar gestión</button>}</div></details></div></td></tr>;
       })}</tbody></table></div>}
       <div className="seguimientos-pagination"><span>Página {page} de {Math.max(1, totalPages)}</span><div className="seguimientos-actions"><label>Filas <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}><option>25</option><option>50</option><option>100</option></select></label><button className="btn secondary" disabled={page <= 1} onClick={() => setPage(current => current - 1)}>Anterior</button><button className="btn secondary" disabled={totalPages === 0 || page >= totalPages} onClick={() => setPage(current => current + 1)}>Siguiente</button></div></div>
     </div></>}

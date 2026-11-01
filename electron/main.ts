@@ -1,4 +1,4 @@
-﻿import { app, BrowserWindow, ipcMain, dialog, shell, session } from "electron";
+﻿import { app, BrowserWindow, ipcMain, dialog, shell, session, Menu } from "electron";
 import { fileURLToPath } from "node:url";
 import { basename, dirname, join, extname } from "node:path";
 import { validateExcelStructure } from "./excelStructureValidator";
@@ -49,12 +49,14 @@ import {
 } from "./repositories/promesaRepository";
 import { createTareaIpcHandlers } from "./ipc/tareaIpc";
 import { createAlertaOperativaIpcHandlers } from "./ipc/alertaOperativaIpc";
+import { createBandejaOperativaIpcHandlers } from "./ipc/bandejaOperativaIpc";
 import * as XLSX from "xlsx";
 import fs from "node:fs";
 import { createHash } from "node:crypto";
 import http from "node:http";
 import os from "node:os";
 import { spawn } from "child_process";
+import { backupDatabase } from "./sqliteBackup";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 const __filename = fileURLToPath(import.meta.url);
@@ -76,6 +78,9 @@ app.setName("Zenith Cartera");
 
 let mainWindow: BrowserWindow | null = null;
 let db: any;
+let tareaIpc: ReturnType<typeof createTareaIpcHandlers>;
+let alertaOperativaIpc: ReturnType<typeof createAlertaOperativaIpcHandlers>;
+let bandejaOperativaIpc: ReturnType<typeof createBandejaOperativaIpcHandlers>;
 let cloudflaredProcess: any = null;
 let ngrokUrl: string = "";
 let ngrokListener: any = null;
@@ -1884,9 +1889,13 @@ ipcMain.handle(
 // Electron lifecycle
 // -----------------------------
 app.whenReady().then(async () => {
+  if (app.isPackaged) Menu.setApplicationMenu(null);
   // Inicializar DB cuando la app esté lista
-  const dbInstance = openDb();
+  const dbInstance = await openDb();
   db = dbInstance.db;
+  tareaIpc = createTareaIpcHandlers(db);
+  alertaOperativaIpc = createAlertaOperativaIpcHandlers(db);
+  bandejaOperativaIpc = createBandejaOperativaIpcHandlers(db);
   migrateHistoricalPromises(db);
 
   try {
@@ -2101,7 +2110,6 @@ ipcMain.handle("empresaGuardar", async (_evt, data) => {
 
 ipcMain.handle("exportarBackup", async () => {
   try {
-    const dbPath = getDbFilePath();
     const { filePath } = await dialog.showSaveDialog({
       title: "Guardar Respaldo de Base de Datos",
       defaultPath: `cartera-backup-${new Date().toISOString().split('T')[0]}.db`,
@@ -2109,7 +2117,7 @@ ipcMain.handle("exportarBackup", async () => {
     });
 
     if (filePath) {
-      fs.copyFileSync(dbPath, filePath);
+      await backupDatabase(db, filePath);
       return { ok: true, path: filePath };
     }
     return { ok: false, message: "Cancelado por el usuario" };
@@ -2352,7 +2360,6 @@ ipcMain.handle("gestionGuardar", (_evt, data) => {
   })();
 });
 
-const tareaIpc = createTareaIpcHandlers(db);
 ipcMain.handle("tareaCrear", (_evt, payload) => tareaIpc.tareaCrear(payload));
 ipcMain.handle("tareaObtener", (_evt, id) => tareaIpc.tareaObtener(id));
 ipcMain.handle("tareasListar", (_evt, payload) => tareaIpc.tareasListar(payload));
@@ -2361,9 +2368,10 @@ ipcMain.handle("tareaCambiarEstado", (_evt, payload) => tareaIpc.tareaCambiarEst
 ipcMain.handle("tareaCompletar", (_evt, payload) => tareaIpc.tareaCompletar(payload));
 ipcMain.handle("tareaCancelar", (_evt, payload) => tareaIpc.tareaCancelar(payload));
 ipcMain.handle("tareaEventosListar", (_evt, payload) => tareaIpc.tareaEventosListar(payload));
-const alertaOperativaIpc = createAlertaOperativaIpcHandlers(db);
 ipcMain.handle("alertasOperativasListar", (_evt, payload) => alertaOperativaIpc.alertasOperativasListar(payload));
 ipcMain.handle("alertasOperativasResumen", (_evt, payload) => alertaOperativaIpc.alertasOperativasResumen(payload));
+ipcMain.handle("bandejaOperativaListar", (_evt, payload) => bandejaOperativaIpc.bandejaOperativaListar(payload));
+ipcMain.handle("bandejaOperativaResumen", (_evt, payload) => bandejaOperativaIpc.bandejaOperativaResumen(payload));
 
 ipcMain.handle("gestionesListar", (_evt, cliente) => {
   return listGestiones(cliente);

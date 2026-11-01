@@ -828,7 +828,7 @@ export default function App() {
   async function actualizarPromesa(promesaActualizada: any) {
     const api=getElectronApi();if (isWeb||!api?.promesaActualizar) return;
     try {
-      const result=await api.promesaActualizar({id:promesaActualizada.id,fecha_promesa:promesaActualizada.fecha_promesa,monto_prometido:Number(promesaActualizada.monto_prometido),motivo_incumplimiento:promesaActualizada.motivo_incumplimiento||null,observacion:promesaActualizada.observacion||null,estado:promesaActualizada.estado as PromesaState});
+      const result=await api.promesaActualizar({id:promesaActualizada.id,fecha_promesa:promesaActualizada.fecha_promesa,monto_prometido:Number(promesaActualizada.monto_prometido),motivo_incumplimiento:promesaActualizada.motivo_incumplimiento||null,observacion:promesaActualizada.observacion||null,estado:promesaActualizada.estado as PromesaState,documentos:(promesaActualizada.documentos??[]).map((documento:any)=>({documento_normalizado:String(documento.documento_normalizado).trim(),monto_comprometido:documento.monto_comprometido??null}))});
       if(result.ok===false)throw new Error(result.message);
       const saved=result.promesa;
       setPromesas(current=>current.map(p=>p.id===saved.id?saved:p));
@@ -2587,6 +2587,25 @@ export default function App() {
                 </select>
               </label>
               
+              <label className="field">
+                <span>Facturas asociadas</span>
+                <select
+                  multiple
+                  value={(promesaEditando.documentos ?? []).map((documento:any) => String(documento.documento_normalizado))}
+                  onChange={event => setPromesaEditando({...promesaEditando, documentos: Array.from(event.currentTarget.selectedOptions, option => ({ documento_normalizado: option.value }))})}
+                  style={{minHeight:'90px'}}
+                >
+                  {docs.filter(doc => {
+                    const selectedClient = String(promesaEditando.cliente ?? '').trim().toLowerCase();
+                    return String(doc.cliente ?? '').trim().toLowerCase() === selectedClient || String(doc.razon_social ?? '').trim().toLowerCase() === selectedClient;
+                  }).map(doc => {
+                    const key = String(doc.documento_normalizado || doc.documento || '').trim();
+                    return key ? <option key={doc.id || key} value={key}>{doc.documento || key} — ${Number(doc.total).toLocaleString()}</option> : null;
+                  })}
+                </select>
+                <small>Selecciona únicamente facturas del cliente. El cambio se valida y guarda como una sola operación.</small>
+              </label>
+
               <label className="field">
                 <span>Observación</span>
                 <textarea 

@@ -12,7 +12,8 @@ import type {
 
 export type SeguimientosApi = Pick<NonNullable<Window['carteraApi']>,
   'tareasListar' | 'tareaCrear' | 'tareaEditar' | 'tareaCambiarEstado' |
-  'tareaCompletar' | 'tareaCancelar' | 'tareaEventosListar'> & Partial<Pick<NonNullable<Window['carteraApi']>,'alertasOperativasListar'|'alertasOperativasResumen'>>;
+  'tareaCompletar' | 'tareaCancelar' | 'tareaEventosListar'> & Partial<Pick<NonNullable<Window['carteraApi']>,
+  'tareaObtener'|'alertasOperativasListar'|'alertasOperativasResumen'|'bandejaOperativaListar'|'bandejaOperativaResumen'>>;
 
 export const SEGUIMIENTO_VIEWS = ['HOY', 'VENCIDA', 'PROXIMA', 'COMPLETADA', 'TODAS'] as const;
 export type SeguimientoView = typeof SEGUIMIENTO_VIEWS[number];

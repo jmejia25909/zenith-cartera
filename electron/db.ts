@@ -1,4 +1,5 @@
 import { beginReleaseUpgrade, completeReleaseUpgrade, validateReleaseSchema } from "./releaseUpgrade";
+import type { ReleaseUpgradeContext } from "./releaseUpgrade";
 import fs from "node:fs";
 import path from "node:path";
 import { app } from "electron";
@@ -9,6 +10,8 @@ import {
   initializeDataSafety,
   restoreDatabaseFile,
 } from "./databaseSafety";
+import type { DataSafetyResult } from "./databaseSafety";
+import { recoverPendingBackup } from "./sqliteBackup";
 
 function ensureDir(p: string) {
   if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
@@ -1119,9 +1122,10 @@ function resolveDbFilePath(): string {
   return resolveDevelopmentDbPath();
 }
 
-export function openDb() {
+export async function openDb() {
   const dbPath = resolveDbFilePath();
   ensureDir(path.dirname(dbPath));
+  await recoverPendingBackup(dbPath);
   const db = new Database(dbPath);
 
   // Configuración de SQLite para permitir múltiples lectores
@@ -1131,19 +1135,29 @@ export function openDb() {
   db.pragma("foreign_keys = ON");    // Integridad referencial
   db.pragma("temp_store = MEMORY");  // Tablas temp en memoria
 
-  const safety = initializeDataSafety(
-    db,
-    dbPath,
-    app.getVersion(),
-  );
-
-  const releaseUpgrade = beginReleaseUpgrade(
-    db,
-    dbPath,
-    app.getVersion(),
-  );
+  let safety: DataSafetyResult = {
+    backupPath: null,
+    migrationApplied: false,
+  };
+  let releaseUpgrade: ReleaseUpgradeContext = {
+    backupPath: null,
+    targetVersion: app.getVersion(),
+    requiresUpgrade: false,
+  };
 
   try {
+    safety = await initializeDataSafety(
+      db,
+      dbPath,
+      app.getVersion(),
+    );
+
+    releaseUpgrade = await beginReleaseUpgrade(
+      db,
+      dbPath,
+      app.getVersion(),
+    );
+
     ensureSchema(db);
     validateReleaseSchema(db);
     assertDatabaseIntegrity(db);

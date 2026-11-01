@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type Database from "better-sqlite3";
+import { backupDatabase } from "./sqliteBackup";
 
 export interface ReleaseUpgradeContext {
   backupPath: string | null;
@@ -54,16 +55,14 @@ function getAppliedVersions(db: Database.Database): Set<string> {
   return new Set(rows.map((row) => String(row.app_version)));
 }
 
-function createReleaseBackup(
+async function createReleaseBackup(
   db: Database.Database,
   dbPath: string,
   targetVersion: string,
-): string | null {
+): Promise<string | null> {
   if (!fs.existsSync(dbPath) || !hasPersistentData(db)) {
     return null;
   }
-
-  db.pragma("wal_checkpoint(TRUNCATE)");
 
   const backupDir = path.join(path.dirname(dbPath), "backups");
   fs.mkdirSync(backupDir, { recursive: true });
@@ -75,15 +74,15 @@ function createReleaseBackup(
     `cartera-pre-upgrade-to-v${safeVersion}-${formatTimestamp(new Date())}.db`,
   );
 
-  fs.copyFileSync(dbPath, backupPath);
+  await backupDatabase(db, backupPath);
   return backupPath;
 }
 
-export function beginReleaseUpgrade(
+export async function beginReleaseUpgrade(
   db: Database.Database,
   dbPath: string,
   targetVersion: string,
-): ReleaseUpgradeContext {
+): Promise<ReleaseUpgradeContext> {
   const requiresUpgrade = !getAppliedVersions(db).has(targetVersion);
 
   if (!requiresUpgrade) {
@@ -95,7 +94,7 @@ export function beginReleaseUpgrade(
   }
 
   return {
-    backupPath: createReleaseBackup(db, dbPath, targetVersion),
+    backupPath: await createReleaseBackup(db, dbPath, targetVersion),
     targetVersion,
     requiresUpgrade: true,
   };

@@ -29,6 +29,7 @@ import type {
   DashboardExecutiveFilters,
   DashboardExecutiveStats,
 } from '../../types/dashboardExecutive';
+import type { BandejaOperativaListResult, BandejaOperativaQuery, BandejaOperativaResumenResult } from '../../types/bandejaOperativa';
 import type {
   CollectionReconciliationResult,
   SaveCollectionPeriodReconciliationInput,
@@ -236,6 +237,8 @@ declare global {
       tareaEventosListar: (query: TareaEventListQuery) => Promise<PaginatedResult<TareaEvent> | TareaErrorResult>;
       alertasOperativasListar: (query: AlertaOperativaQuery) => Promise<AlertaOperativaListResult>;
       alertasOperativasResumen: (query?: AlertaOperativaQuery) => Promise<AlertaOperativaResumenResult>;
+      bandejaOperativaListar: (query: BandejaOperativaQuery) => Promise<BandejaOperativaListResult>;
+      bandejaOperativaResumen: (query?: BandejaOperativaQuery) => Promise<BandejaOperativaResumenResult>;
       promesaGuardar: (data: PromesaCreateInput) => Promise<PromesaMutationResult>;
       promesasListar: () => Promise<Promesa[]>;
       promesaObtener: (id: number) => Promise<Promesa | null>;
